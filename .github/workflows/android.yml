@@ -1,0 +1,75 @@
+name: Android
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Build release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Ensure gradlew is executable
+        working-directory: alex_browser/android
+        run: chmod +x ./gradlew
+
+      - name: Install dependencies
+        working-directory: alex_browser
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: alex_browser
+        run: flutter analyze --no-fatal-infos
+        continue-on-error: true
+
+      - name: Run tests
+        working-directory: alex_browser
+        run: flutter test
+
+      - name: Build release APK
+        working-directory: alex_browser
+        run: flutter build apk --release
+
+      # If the developer dropped their own keystore + android/key.properties
+      # into the repo (they should NOT — see android/key.properties.example),
+      # the app/build.gradle.kts config picks it up automatically. Otherwise
+      # this APK is signed with Flutter's debug keystore, which still
+      # produces a fully installable release APK with zero setup, exactly
+      # as `flutter build apk --release` does out of the box.
+      - name: Locate build output
+        working-directory: alex_browser
+        run: ls -la build/app/outputs/flutter-apk/
+
+      - name: Rename output APK
+        working-directory: alex_browser
+        run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload release APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: alex-browser-android-release-apk
+          path: alex_browser/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 30

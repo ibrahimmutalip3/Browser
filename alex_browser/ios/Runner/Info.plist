@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Alex Browser</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>alex_browser</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(FLUTTER_BUILD_NAME)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+
+	<!-- App Transport Security: HTTPS is allowed by default (no exception
+	     needed). Arbitrary-load exceptions are intentionally NOT added
+	     here — see requirement #24 ("do not weaken security mechanisms
+	     for compatibility"); genuinely insecure http:// sites will surface
+	     the same ATS block a real browser like Safari would apply unless
+	     the user's target site specifically requires an exception, which
+	     is left to be configured per-deployment rather than opened
+	     globally by default. -->
+
+	<!-- Permission usage descriptions: required by Apple for any app that
+	     lets WKWebView surface getUserMedia()/geolocation prompts to
+	     websites (requirement #15: users must understand what a site is
+	     requesting). Without these strings, iOS silently denies the
+	     permission and the app would crash if it tried to request it. -->
+	<key>NSCameraUsageDescription</key>
+	<string>Alex Browser needs camera access so that websites you visit can use your camera when you allow it (for example, for video calls).</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Alex Browser needs microphone access so that websites you visit can use your microphone when you allow it (for example, for voice or video calls).</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Alex Browser needs location access so that websites you visit can show you local content when you allow it (for example, maps or nearby search results).</string>
+	<key>NSLocationUsageDescription</key>
+	<string>Alex Browser needs location access so that websites you visit can show you local content when you allow it.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Alex Browser needs photo library access so you can upload photos to websites when you choose to.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Alex Browser needs photo library access to save images and downloads you choose to keep.</string>
+
+	<!-- Downloads: iOS apps cannot write to a shared "Downloads" folder,
+	     so downloaded files are saved in the app's own Documents
+	     directory (see DownloadManagerService) and exposed to the user
+	     through the Files app via these two keys, which is the closest
+	     equivalent Apple's sandbox allows (requirement #12: "account for
+	     filesystem differences between Android and iOS"). -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+
+	<!-- URL scheme handling (requirement #18): lets the app query whether
+	     it can open external-app schemes (tel:, mailto:, sms:, maps,
+	     App Store, etc) before handing off navigation to them via
+	     ExternalSchemeHandler / url_launcher. Without declaring a scheme
+	     here, canLaunchUrl() for that scheme returns false on iOS 9+. -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>telprompt</string>
+		<string>mailto</string>
+		<string>sms</string>
+		<string>maps</string>
+		<string>comgooglemaps</string>
+		<string>itms-apps</string>
+		<string>facetime</string>
+		<string>whatsapp</string>
+	</array>
+</dict>
+</plist>

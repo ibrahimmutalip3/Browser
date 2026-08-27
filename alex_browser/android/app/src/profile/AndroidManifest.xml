@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The INTERNET permission is required for profiling to communicate
+         with the running application to determine the network traffic
+         and other performance metrics. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+</manifest>
