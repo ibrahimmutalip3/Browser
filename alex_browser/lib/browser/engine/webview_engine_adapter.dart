@@ -23,7 +23,8 @@ import 'package:alex_browser/core/services/permission_service.dart';
 /// 2.5.6). Both are driven through this single adapter so the rest of the
 /// app only ever talks to the [BrowserEngine] abstraction.
 class WebViewEngineAdapter implements BrowserEngine {
-  WebViewEngineAdapter({required this.isPrivate}) {
+  WebViewEngineAdapter({required this.isPrivate})
+    : _viewId = _instanceCounter++ {
     _pageStateController = StreamController<PageLoadState>.broadcast();
     _jsDialogController = StreamController<JsDialogRequest>.broadcast();
     _permissionController = StreamController<WebPermissionRequest>.broadcast();
@@ -31,6 +32,16 @@ class WebViewEngineAdapter implements BrowserEngine {
     _downloadController = StreamController<EngineDownloadRequest>.broadcast();
     _state = PageLoadState.initial;
   }
+
+  Future<InAppWebViewController> _getController() async {
+  if (_disposed) {
+    throw StateError('WebViewEngineAdapter has been disposed');
+  }
+  if (_controller != null) {
+    return _controller!;
+  }
+  return _controllerCompleter.future;
+}
 
   /// Whether this engine instance belongs to a private (incognito) tab.
   /// Private engines use an isolated, ephemeral WebView data store so
@@ -41,6 +52,9 @@ class WebViewEngineAdapter implements BrowserEngine {
 
   InAppWebViewController? _controller;
   late PageLoadState _state;
+
+  final Completer<InAppWebViewController> _controllerCompleter =
+    Completer<InAppWebViewController>();
 
   late final StreamController<PageLoadState> _pageStateController;
   late final StreamController<JsDialogRequest> _jsDialogController;
@@ -57,6 +71,7 @@ class WebViewEngineAdapter implements BrowserEngine {
   bool _disposed = false;
 
   static int _instanceCounter = 0;
+  final int _viewId;
 
   void _emitState(PageLoadState newState) {
     if (_disposed) return;
@@ -66,9 +81,8 @@ class WebViewEngineAdapter implements BrowserEngine {
 
   @override
   Widget buildView() {
-    final int id = _instanceCounter++;
     return InAppWebView(
-      key: ValueKey<String>('webview_${id}_${isPrivate ? 'private' : 'normal'}'),
+  key: ValueKey<String>('webview_$_viewId'),
       initialSettings: InAppWebViewSettings(
         javaScriptEnabled: _javaScriptEnabled,
         javaScriptCanOpenWindowsAutomatically: false,
@@ -100,8 +114,11 @@ class WebViewEngineAdapter implements BrowserEngine {
         userAgent: _userAgent(),
       ),
       onWebViewCreated: (InAppWebViewController controller) {
-        _controller = controller;
-      },
+  _controller = controller;
+  if (!_controllerCompleter.isCompleted) {
+    _controllerCompleter.complete(controller);
+  }
+},
       onLoadStart: (InAppWebViewController controller, WebUri? uri) {
         _emitState(
           _state
@@ -360,13 +377,15 @@ class WebViewEngineAdapter implements BrowserEngine {
   }
 
   @override
-  Future<void> loadUrl(String url, {Map<String, String>? headers}) async {
-    final InAppWebViewController? controller = _controller;
-    if (controller == null) return;
-    await controller.loadUrl(
-      urlRequest: URLRequest(url: WebUri(url), headers: _withDoNotTrack(headers)),
-    );
-  }
+Future<void> loadUrl(String url, {Map<String, String>? headers}) async {
+  final InAppWebViewController controller = await _getController();
+  await controller.loadUrl(
+    urlRequest: URLRequest(
+      url: WebUri(url),
+      headers: _withDoNotTrack(headers),
+    ),
+  );
+}
 
   /// Merges the `DNT: 1` header into [headers] when Do Not Track is
   /// enabled in Settings. This is a request signal only, sent faithfully
@@ -378,16 +397,15 @@ class WebViewEngineAdapter implements BrowserEngine {
   }
 
   @override
-  Future<void> loadHtml(String html, {String? baseUrl}) async {
-    final InAppWebViewController? controller = _controller;
-    if (controller == null) return;
-    await controller.loadData(
-      data: html,
-      baseUrl: baseUrl != null ? WebUri(baseUrl) : null,
-      mimeType: 'text/html',
-      encoding: 'utf8',
-    );
-  }
+Future<void> loadHtml(String html, {String? baseUrl}) async {
+  final InAppWebViewController controller = await _getController();
+  await controller.loadData(
+    data: html,
+    baseUrl: baseUrl != null ? WebUri(baseUrl) : null,
+    mimeType: 'text/html',
+    encoding: 'utf8',
+  );
+}
 
   @override
   Future<void> goBack() async {
@@ -521,13 +539,22 @@ class WebViewEngineAdapter implements BrowserEngine {
   }
 
   @override
-  Future<void> dispose() async {
-    _disposed = true;
-    await _pageStateController.close();
-    await _jsDialogController.close();
-    await _permissionController.close();
-    await _newWindowController.close();
-    await _downloadController.close();
-    _controller = null;
+Future<void> dispose() async {
+  if (_disposed) return;
+  _disposed = true;
+
+  if (!_controllerCompleter.isCompleted) {
+    _controllerCompleter.completeError(
+      StateError('WebView was disposed before it was created'),
+    );
   }
+
+  await _pageStateController.close();
+  await _jsDialogController.close();
+  await _permissionController.close();
+  await _newWindowController.close();
+  await _downloadController.close();
+
+  _controller = null;
+}
 }
