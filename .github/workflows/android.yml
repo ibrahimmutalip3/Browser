@@ -35,6 +35,33 @@ jobs:
         working-directory: alex_browser/android
         run: chmod +x ./gradlew
 
+      # Guards against a corrupted/truncated gradle-wrapper.jar in the repo
+      # (the classic "Could not find or load main class
+      # org.gradle.wrapper.GradleWrapperMain" failure). A valid wrapper jar
+      # is a non-trivial zip archive containing that class; if it's missing,
+      # empty, or not a real jar, regenerate it from the pinned distribution
+      # in gradle-wrapper.properties using the `gradle` binary GitHub's
+      # ubuntu-latest runners ship, then re-verify before continuing.
+      - name: Verify gradle wrapper jar
+        working-directory: alex_browser/android
+        run: |
+          set -e
+          JAR=gradle/wrapper/gradle-wrapper.jar
+          is_valid_wrapper_jar() {
+            [ -s "$JAR" ] && unzip -l "$JAR" 2>/dev/null | grep -q "org/gradle/wrapper/GradleWrapperMain.class"
+          }
+          if is_valid_wrapper_jar; then
+            echo "gradle-wrapper.jar looks valid."
+          else
+            echo "gradle-wrapper.jar is missing or corrupted — regenerating it."
+            GRADLE_VERSION=$(grep -o 'gradle-[0-9.]*' gradle/wrapper/gradle-wrapper.properties | head -1 | sed 's/gradle-//')
+            gradle wrapper --gradle-version "${GRADLE_VERSION:-8.9}"
+            if ! is_valid_wrapper_jar; then
+              echo "::error::Failed to produce a valid gradle-wrapper.jar"
+              exit 1
+            fi
+          fi
+
       - name: Install dependencies
         working-directory: alex_browser
         run: flutter pub get
