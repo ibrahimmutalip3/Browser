@@ -80,7 +80,7 @@ class DownloadManagerService {
     final String fileName = _uniqueFileName(dir, request.suggestedFileName);
     final String filePath = p.join(dir.path, fileName);
 
-    DownloadItem item = DownloadItem(
+    final DownloadItem item = DownloadItem(
       id: _uuid.v4(),
       url: request.url,
       fileName: fileName,

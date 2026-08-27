@@ -5,7 +5,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:alex_browser/browser/repositories/site_permissions_repository.dart';
 import 'package:alex_browser/core/providers/core_providers.dart';
 import 'package:alex_browser/core/services/permission_service.dart';
-import 'package:alex_browser/downloads/repositories/downloads_repository.dart';
 import 'package:alex_browser/settings/controllers/settings_controller.dart';
 import 'package:alex_browser/settings/models/search_engine.dart';
 import 'package:alex_browser/tabs/controllers/tabs_controller.dart';

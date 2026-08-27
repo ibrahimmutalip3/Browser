@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:alex_browser/core/utils/url_utils.dart';
 
 /// Outcome of attempting to hand a non-web URL scheme to the OS, so the UI
 /// can show a clear message when nothing on the device can handle it
@@ -25,14 +24,14 @@ class ExternalSchemeHandler {
 
   /// Stream of results, primarily so the UI can show a snackbar/toast when
   /// a scheme has no handler installed on the device.
-  final StreamController<_ExternalSchemeEvent> _events = StreamController<_ExternalSchemeEvent>.broadcast();
+  final StreamController<ExternalSchemeEvent> _events = StreamController<ExternalSchemeEvent>.broadcast();
 
-  Stream<_ExternalSchemeEvent> get events => _events.stream;
+  Stream<ExternalSchemeEvent> get events => _events.stream;
 
   Future<ExternalSchemeResult> handle(String url) async {
     final Uri? uri = Uri.tryParse(url);
     if (uri == null || uri.scheme.isEmpty) {
-      _events.add(_ExternalSchemeEvent(url, ExternalSchemeResult.invalid));
+      _events.add(ExternalSchemeEvent(url, ExternalSchemeResult.invalid));
       return ExternalSchemeResult.invalid;
     }
 
@@ -43,22 +42,22 @@ class ExternalSchemeHandler {
     try {
       final bool can = await canLaunchUrl(uri);
       if (!can) {
-        _events.add(_ExternalSchemeEvent(url, ExternalSchemeResult.unsupported));
+        _events.add(ExternalSchemeEvent(url, ExternalSchemeResult.unsupported));
         return ExternalSchemeResult.unsupported;
       }
       final bool launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
       final ExternalSchemeResult result = launched ? ExternalSchemeResult.launched : ExternalSchemeResult.unsupported;
-      _events.add(_ExternalSchemeEvent(url, result));
+      _events.add(ExternalSchemeEvent(url, result));
       return result;
     } catch (_) {
-      _events.add(_ExternalSchemeEvent(url, ExternalSchemeResult.unsupported));
+      _events.add(ExternalSchemeEvent(url, ExternalSchemeResult.unsupported));
       return ExternalSchemeResult.unsupported;
     }
   }
 }
 
-class _ExternalSchemeEvent {
-  const _ExternalSchemeEvent(this.url, this.result);
+class ExternalSchemeEvent {
+  const ExternalSchemeEvent(this.url, this.result);
   final String url;
   final ExternalSchemeResult result;
 }

@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alex_browser/browser/engine/browser_engine.dart';
 import 'package:alex_browser/browser/models/js_dialog_request.dart';
 import 'package:alex_browser/browser/models/page_load_state.dart';
-import 'package:alex_browser/browser/models/permission_request.dart';
 import 'package:alex_browser/browser/services/error_page.dart';
 import 'package:alex_browser/browser/services/js_dialog_view.dart';
 import 'package:alex_browser/browser/services/permission_prompt_view.dart';

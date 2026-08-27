@@ -294,11 +294,13 @@ class WebViewEngineAdapter implements BrowserEngine {
     if (type == WebResourceErrorType.TIMEOUT) {
       return PageErrorType.timeout;
     }
-    if (type == WebResourceErrorType.CONNECT ||
-        type == WebResourceErrorType.FAILED_SSL_HANDSHAKE) {
+    if (type == WebResourceErrorType.FAILED_SSL_HANDSHAKE) {
       return PageErrorType.connectionRefused;
     }
-    if (type == WebResourceErrorType.CANNOT_CONNECT_TO_HOST) {
+    if (type == WebResourceErrorType.CANNOT_CONNECT_TO_HOST ||
+        type == WebResourceErrorType.CONNECTION_ABORTED ||
+        type == WebResourceErrorType.RESET ||
+        type == WebResourceErrorType.SERVER_UNREACHABLE) {
       return PageErrorType.connectionRefused;
     }
     final String name = type.toString().toLowerCase();
@@ -500,7 +502,7 @@ class WebViewEngineAdapter implements BrowserEngine {
 
   @override
   Future<void> clearCache() async {
-    await _controller?.clearCache();
+    await InAppWebViewController.clearAllCache();
   }
 
   @override

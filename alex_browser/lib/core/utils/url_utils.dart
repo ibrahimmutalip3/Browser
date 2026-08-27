@@ -63,7 +63,7 @@ class UrlUtils {
   /// Normalizes raw address-bar input into a fully-qualified URL ready to
   /// be loaded by the WebView. Adds "https://" when no scheme is present.
   static String normalizeUrl(String input) {
-    String trimmed = input.trim();
+    final String trimmed = input.trim();
 
     if (hasScheme(trimmed)) {
       return trimmed;

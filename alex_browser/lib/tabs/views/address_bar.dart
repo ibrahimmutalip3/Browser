@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:alex_browser/browser/models/page_load_state.dart';
-import 'package:alex_browser/core/utils/url_utils.dart';
 
 /// The main address/search bar: shows the current URL when unfocused (with
 /// an HTTPS lock indicator and loading progress), and becomes an editable
