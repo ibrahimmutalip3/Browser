@@ -45,11 +45,51 @@ jobs:
           flutter build ios --release --no-codesign \
             --build-name=1.0.0 --build-number=1
 
-      # `flutter build ios --no-codesign` produces Runner.app under
-      # build/ios/iphoneos. A real .ipa is just that .app repackaged into
-      # the Payload/ folder structure Apple's installer expects — this is
-      # the correct, standard way to produce an unsigned IPA from Flutter
-      # when no Apple signing identity is available in CI.
+      # `flutter build ios --no-codesign` leaves Runner.app's main
+      # executable AND every nested plugin/engine .framework (Flutter,
+      # App, flutter_inappwebview, sqflite, permission_handler,
+      # connectivity_plus, open_filex, url_launcher, package_info_plus,
+      # etc — one per CocoaPods pod, since the Podfile uses
+      # `use_frameworks!`) completely unsigned.
+      #
+      # Some re-signing tools (including some ESign builds/versions) only
+      # re-sign the top-level Runner binary and do not walk into
+      # Frameworks/*.framework to sign each one individually. iOS's
+      # dynamic linker verifies the code signature of every loaded
+      # framework at launch, so a Runner binary that got a fresh
+      # signature sitting next to a dozen still-unsigned engine/plugin
+      # frameworks fails that verification and the process is killed
+      # before the first frame is drawn — a black screen with no visible
+      # crash UI. Ad-hoc signing every nested framework here (with `-`,
+      # meaning "sign with no identity, just make the signature
+      # structurally consistent") means that by the time ESign re-signs
+      # the outer bundle, every binary inside already carries a valid,
+      # coherent signature shape, regardless of which specific re-signing
+      # tool or option is used downstream.
+      - name: Ad-hoc sign nested frameworks
+        working-directory: alex_browser
+        run: |
+          set -e
+          APP_PATH="build/ios/iphoneos/Runner.app"
+
+          if [ -d "$APP_PATH/Frameworks" ]; then
+            find "$APP_PATH/Frameworks" -name "*.framework" -o -name "*.dylib" | while read -r item; do
+              echo "Ad-hoc signing: $item"
+              codesign --force --deep --sign - "$item"
+            done
+          fi
+
+          # Re-sign the main app bundle last so its signature is computed
+          # over the now-signed nested frameworks, not the reverse.
+          codesign --force --deep --sign - "$APP_PATH"
+
+          echo "Verifying signature structure:"
+          codesign --verify --deep --verbose=2 "$APP_PATH" || true
+
+      # A real .ipa is just that .app repackaged into the Payload/ folder
+      # structure Apple's installer expects — this is the correct,
+      # standard way to produce an unsigned (well: ad-hoc signed) IPA
+      # from Flutter when no Apple signing identity is available in CI.
       - name: Package unsigned IPA
         working-directory: alex_browser
         run: |
