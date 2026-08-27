@@ -261,8 +261,8 @@ class TabsController extends Notifier<TabsState> {
     final String targetUrl = url ?? ref.read(settingsControllerProvider).homepage;
     final BrowserEngine? engine = _engines[tab.id];
     if (engine != null && targetUrl != AppConstants.newTabUrl) {
-      await engine.loadUrl(targetUrl);
-    }
+  unawaited(engine.loadUrl(targetUrl));
+}
     await _persistSession();
   }
 
