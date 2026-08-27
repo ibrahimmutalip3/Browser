@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import 'package:alex_browser/browser/repositories/site_permissions_repository.dart';
 import 'package:alex_browser/core/providers/core_providers.dart';
 import 'package:alex_browser/core/services/permission_service.dart';
 import 'package:alex_browser/downloads/repositories/downloads_repository.dart';

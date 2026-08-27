@@ -80,7 +80,7 @@ class UrlUtils {
   /// given search engine's query template (e.g.
   /// "https://www.google.com/search?q=%s").
   static String buildSearchUrl(String queryTemplate, String query) {
-    final String encoded = Uri.encodeQueryComponent(query.trim());
+    final String encoded = Uri.encodeComponent(query.trim());
     return queryTemplate.replaceAll('%s', encoded);
   }
 

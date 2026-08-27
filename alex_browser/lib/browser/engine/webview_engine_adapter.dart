@@ -57,7 +57,6 @@ class WebViewEngineAdapter implements BrowserEngine {
   bool _disposed = false;
 
   static int _instanceCounter = 0;
-  final String _webViewGroupId = 'alex_browser_group';
 
   void _emitState(PageLoadState newState) {
     if (_disposed) return;
@@ -194,7 +193,7 @@ class WebViewEngineAdapter implements BrowserEngine {
         final String url = createWindowAction.request.url?.toString() ?? '';
         if (url.isNotEmpty) {
           _newWindowController.add(
-            NewWindowRequest(url: url, isUserGesture: createWindowAction.isUserGesture ?? true),
+            NewWindowRequest(url: url, isUserGesture: true),
           );
         }
         // We never let the WebView itself spawn a second native window;
@@ -275,40 +274,41 @@ class WebViewEngineAdapter implements BrowserEngine {
   }
 
   WebPermissionType? _mapEngineResource(PermissionResourceType resource) {
-    switch (resource) {
-      case PermissionResourceType.CAMERA:
-        return WebPermissionType.camera;
-      case PermissionResourceType.MICROPHONE:
-        return WebPermissionType.microphone;
-      case PermissionResourceType.CAMERA_AND_MICROPHONE:
-        return WebPermissionType.camera;
-      default:
-        return null;
+    if (resource == PermissionResourceType.CAMERA) {
+      return WebPermissionType.camera;
     }
+    if (resource == PermissionResourceType.MICROPHONE) {
+      return WebPermissionType.microphone;
+    }
+    if (resource == PermissionResourceType.CAMERA_AND_MICROPHONE) {
+      return WebPermissionType.camera;
+    }
+    return null;
   }
 
   PageErrorType _mapErrorType(WebResourceErrorType? type) {
     if (type == null) return PageErrorType.unknown;
-    switch (type) {
-      case WebResourceErrorType.HOST_LOOKUP:
-        return PageErrorType.dnsFailure;
-      case WebResourceErrorType.TIMEOUT:
-        return PageErrorType.timeout;
-      case WebResourceErrorType.CONNECT:
-      case WebResourceErrorType.FAILED_SSL_HANDSHAKE:
-        return PageErrorType.connectionRefused;
-      case WebResourceErrorType.CANNOT_CONNECT_TO_HOST:
-        return PageErrorType.connectionRefused;
-      default:
-        final String name = type.toString().toLowerCase();
-        if (name.contains('ssl') || name.contains('certificate')) {
-          return PageErrorType.sslError;
-        }
-        if (name.contains('internet') || name.contains('network')) {
-          return PageErrorType.noInternet;
-        }
-        return PageErrorType.unknown;
+    if (type == WebResourceErrorType.HOST_LOOKUP) {
+      return PageErrorType.dnsFailure;
     }
+    if (type == WebResourceErrorType.TIMEOUT) {
+      return PageErrorType.timeout;
+    }
+    if (type == WebResourceErrorType.CONNECT ||
+        type == WebResourceErrorType.FAILED_SSL_HANDSHAKE) {
+      return PageErrorType.connectionRefused;
+    }
+    if (type == WebResourceErrorType.CANNOT_CONNECT_TO_HOST) {
+      return PageErrorType.connectionRefused;
+    }
+    final String name = type.toString().toLowerCase();
+    if (name.contains('ssl') || name.contains('certificate')) {
+      return PageErrorType.sslError;
+    }
+    if (name.contains('internet') || name.contains('network')) {
+      return PageErrorType.noInternet;
+    }
+    return PageErrorType.unknown;
   }
 
   Future<JsDialogResult> _showJsDialog(JsDialogRequest request) async {

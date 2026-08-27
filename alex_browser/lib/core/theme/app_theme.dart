@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 /// Centralized theme definitions for Alex Browser.
@@ -43,7 +44,7 @@ class AppTheme {
         color: scheme.surfaceContainer,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
-      bottomAppBarTheme: BottomAppBarTheme(
+      bottomAppBarTheme: BottomAppBarThemeData(
         color: scheme.surface,
         elevation: 2,
         surfaceTintColor: Colors.transparent,
@@ -97,7 +98,7 @@ class AppTheme {
         color: scheme.surfaceContainer,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
-      bottomAppBarTheme: BottomAppBarTheme(
+      bottomAppBarTheme: BottomAppBarThemeData(
         color: scheme.surface,
         elevation: 2,
         surfaceTintColor: Colors.transparent,
