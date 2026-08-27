@@ -35,31 +35,56 @@ jobs:
         working-directory: alex_browser/android
         run: chmod +x ./gradlew
 
-      # Guards against a corrupted/truncated gradle-wrapper.jar in the repo
-      # (the classic "Could not find or load main class
-      # org.gradle.wrapper.GradleWrapperMain" failure). A valid wrapper jar
-      # is a non-trivial zip archive containing that class; if it's missing,
-      # empty, or not a real jar, regenerate it from the pinned distribution
-      # in gradle-wrapper.properties using the `gradle` binary GitHub's
-      # ubuntu-latest runners ship, then re-verify before continuing.
+      # Guards against a corrupted gradle-wrapper.jar in the repo (the
+      # classic "Could not find or load main class
+      # org.gradle.wrapper.GradleWrapperMain" failure). Listing the zip
+      # entries is NOT enough to catch this — a jar can have a perfectly
+      # valid central directory and still fail to load if the class bytes
+      # themselves were mangled (e.g. by a line-ending conversion at some
+      # point in the file's history), so we actually invoke the JVM against
+      # it, exactly like gradlew does, and treat anything but success as
+      # corrupt. On any failure we regenerate the jar and script from
+      # scratch by downloading the matching Gradle distribution directly
+      # (not relying on a system `gradle` binary, which may not be
+      # installed or may itself be a mismatched version) and extracting its
+      # official wrapper jar, then re-verify before continuing.
       - name: Verify gradle wrapper jar
         working-directory: alex_browser/android
         run: |
           set -e
           JAR=gradle/wrapper/gradle-wrapper.jar
-          is_valid_wrapper_jar() {
-            [ -s "$JAR" ] && unzip -l "$JAR" 2>/dev/null | grep -q "org/gradle/wrapper/GradleWrapperMain.class"
+
+          jar_actually_works() {
+            [ -s "$JAR" ] || return 1
+            java -cp "$JAR" org.gradle.wrapper.GradleWrapperMain --version > /tmp/wrapper_check.log 2>&1
           }
-          if is_valid_wrapper_jar; then
-            echo "gradle-wrapper.jar looks valid."
+
+          if jar_actually_works; then
+            echo "gradle-wrapper.jar verified working."
           else
-            echo "gradle-wrapper.jar is missing or corrupted — regenerating it."
+            echo "gradle-wrapper.jar is missing or corrupted — output was:"
+            cat /tmp/wrapper_check.log || true
+            echo "Regenerating gradle-wrapper.jar and gradlew from the pinned Gradle distribution..."
+
             GRADLE_VERSION=$(grep -o 'gradle-[0-9.]*' gradle/wrapper/gradle-wrapper.properties | head -1 | sed 's/gradle-//')
-            gradle wrapper --gradle-version "${GRADLE_VERSION:-8.9}"
-            if ! is_valid_wrapper_jar; then
-              echo "::error::Failed to produce a valid gradle-wrapper.jar"
+            GRADLE_VERSION="${GRADLE_VERSION:-8.9}"
+
+            TMP_DIR=$(mktemp -d)
+            curl -fsSL -o "$TMP_DIR/gradle.zip" "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip"
+            unzip -q "$TMP_DIR/gradle.zip" -d "$TMP_DIR"
+
+            GRADLE_BIN="$TMP_DIR/gradle-${GRADLE_VERSION}/bin/gradle"
+            chmod +x "$GRADLE_BIN"
+            "$GRADLE_BIN" wrapper --gradle-version "$GRADLE_VERSION" --distribution-type all
+
+            rm -rf "$TMP_DIR"
+
+            if ! jar_actually_works; then
+              echo "::error::Regenerated gradle-wrapper.jar still fails to load. Output:"
+              cat /tmp/wrapper_check.log || true
               exit 1
             fi
+            echo "gradle-wrapper.jar regenerated and verified working."
           fi
 
       - name: Install dependencies
