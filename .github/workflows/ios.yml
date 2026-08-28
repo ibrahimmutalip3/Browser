@@ -73,18 +73,38 @@ jobs:
           APP_PATH="build/ios/iphoneos/Runner.app"
 
           if [ -d "$APP_PATH/Frameworks" ]; then
-            find "$APP_PATH/Frameworks" -name "*.framework" -o -name "*.dylib" | while read -r item; do
-              echo "Ad-hoc signing: $item"
-              codesign --force --deep --sign - "$item"
+            # Sign innermost items first (dylibs, then each .framework's own
+            # binary), one at a time and WITHOUT --deep. --deep is explicitly
+            # discouraged by Apple for anything other than a quick sanity
+            # signature: it silently skips or mis-signs nested bundles that
+            # have their own Frameworks/Resources layout, which is exactly
+            # what several of these plugin frameworks have. Signing each
+            # .framework individually guarantees every one of them ends up
+            # with its own valid, independent signature.
+            find "$APP_PATH/Frameworks" -name "*.dylib" -print0 | while IFS= read -r -d '' item; do
+              echo "Signing dylib: $item"
+              codesign --force --sign - "$item"
+            done
+
+            find "$APP_PATH/Frameworks" -name "*.framework" -print0 | while IFS= read -r -d '' item; do
+              echo "Signing framework: $item"
+              codesign --force --sign - "$item"
             done
           fi
 
-          # Re-sign the main app bundle last so its signature is computed
-          # over the now-signed nested frameworks, not the reverse.
-          codesign --force --deep --sign - "$APP_PATH"
+          # Re-sign the main app bundle last, WITHOUT --deep, now that every
+          # nested framework already carries its own real signature. Using
+          # --deep here would re-walk and could re-write the nested
+          # signatures we just verified above.
+          codesign --force --sign - "$APP_PATH"
 
           echo "Verifying signature structure:"
-          codesign --verify --deep --verbose=2 "$APP_PATH" || true
+          codesign --verify --deep --strict --verbose=4 "$APP_PATH"
+
+          echo "Checking for any unsigned or invalid nested binaries:"
+          find "$APP_PATH/Frameworks" -name "*.framework" -print0 2>/dev/null | while IFS= read -r -d '' fw; do
+            codesign --verify --verbose=2 "$fw"
+          done
 
       # A real .ipa is just that .app repackaged into the Payload/ folder
       # structure Apple's installer expects — this is the correct,
