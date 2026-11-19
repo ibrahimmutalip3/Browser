@@ -1,0 +1,127 @@
+name: Android
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Build release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Ensure gradlew is executable
+        working-directory: alex_browser/android
+        run: chmod +x ./gradlew
+
+      # Guards against a corrupted gradle-wrapper.jar in the repo (the
+      # classic "Could not find or load main class
+      # org.gradle.wrapper.GradleWrapperMain" failure). Listing the zip
+      # entries is NOT enough to catch this — a jar can have a perfectly
+      # valid central directory and still fail to load if the class bytes
+      # themselves were mangled (e.g. by a line-ending conversion at some
+      # point in the file's history), so we actually invoke the JVM against
+      # it, exactly like gradlew does, and treat anything but success as
+      # corrupt. On any failure we regenerate the jar and script from
+      # scratch by downloading the matching Gradle distribution directly
+      # (not relying on a system `gradle` binary, which may not be
+      # installed or may itself be a mismatched version) and extracting its
+      # official wrapper jar, then re-verify before continuing.
+      - name: Verify gradle wrapper jar
+        working-directory: alex_browser/android
+        run: |
+          set -e
+          JAR=gradle/wrapper/gradle-wrapper.jar
+
+          jar_actually_works() {
+            [ -s "$JAR" ] || return 1
+            java -cp "$JAR" org.gradle.wrapper.GradleWrapperMain --version > /tmp/wrapper_check.log 2>&1
+          }
+
+          if jar_actually_works; then
+            echo "gradle-wrapper.jar verified working."
+          else
+            echo "gradle-wrapper.jar is missing or corrupted — output was:"
+            cat /tmp/wrapper_check.log || true
+            echo "Regenerating gradle-wrapper.jar and gradlew from the pinned Gradle distribution..."
+
+            GRADLE_VERSION=$(grep -o 'gradle-[0-9.]*' gradle/wrapper/gradle-wrapper.properties | head -1 | sed 's/gradle-//')
+            GRADLE_VERSION="${GRADLE_VERSION:-8.9}"
+
+            TMP_DIR=$(mktemp -d)
+            curl -fsSL -o "$TMP_DIR/gradle.zip" "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip"
+            unzip -q "$TMP_DIR/gradle.zip" -d "$TMP_DIR"
+
+            GRADLE_BIN="$TMP_DIR/gradle-${GRADLE_VERSION}/bin/gradle"
+            chmod +x "$GRADLE_BIN"
+            "$GRADLE_BIN" wrapper --gradle-version "$GRADLE_VERSION" --distribution-type all
+
+            rm -rf "$TMP_DIR"
+
+            if ! jar_actually_works; then
+              echo "::error::Regenerated gradle-wrapper.jar still fails to load. Output:"
+              cat /tmp/wrapper_check.log || true
+              exit 1
+            fi
+            echo "gradle-wrapper.jar regenerated and verified working."
+          fi
+
+      - name: Install dependencies
+        working-directory: alex_browser
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: alex_browser
+        run: flutter analyze --no-fatal-infos
+        continue-on-error: true
+
+      - name: Run tests
+        working-directory: alex_browser
+        run: flutter test
+
+      - name: Build release APK
+        working-directory: alex_browser
+        run: flutter build apk --release
+
+      # If the developer dropped their own keystore + android/key.properties
+      # into the repo (they should NOT — see android/key.properties.example),
+      # the app/build.gradle.kts config picks it up automatically. Otherwise
+      # this APK is signed with Flutter's debug keystore, which still
+      # produces a fully installable release APK with zero setup, exactly
+      # as `flutter build apk --release` does out of the box.
+      - name: Locate build output
+        working-directory: alex_browser
+        run: ls -la build/app/outputs/flutter-apk/
+
+      - name: Rename output APK
+        working-directory: alex_browser
+        run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload release APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: alex-browser-android-release-apk
+          path: alex_browser/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 30

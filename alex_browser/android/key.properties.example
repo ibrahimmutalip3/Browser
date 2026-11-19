@@ -1,0 +1,29 @@
+# Optional Android release signing.
+#
+# By default this project's release build type falls back to Flutter's
+# debug signing config (see android/app/build.gradle.kts), so
+# `flutter build apk --release` always produces a directly installable
+# APK with zero setup — this is what GitHub Actions uses.
+#
+# If you want your own release keystore instead (e.g. for Play Store
+# distribution with a consistent signing identity across updates):
+#
+#   1. Generate a keystore:
+#        keytool -genkey -v -keystore alex-browser-release.jks \
+#          -keyalg RSA -keysize 2048 -validity 10000 -alias alex_browser
+#
+#   2. Copy this file to android/key.properties (that exact path — it is
+#      already covered by .gitignore, so it will never be committed) and
+#      fill in the real values below.
+#
+#   3. Place the .jks/.keystore file somewhere outside version control
+#      and point storeFile at it (relative paths are resolved from the
+#      android/ directory).
+#
+# android/key.properties is read automatically by android/app/build.gradle.kts
+# if present. Never commit your real keystore or this filled-in file.
+
+storePassword=CHANGE_ME
+keyPassword=CHANGE_ME
+keyAlias=alex_browser
+storeFile=../alex-browser-release.jks

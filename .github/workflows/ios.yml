@@ -1,0 +1,86 @@
+name: iOS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    name: Build unsigned IPA
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Install dependencies
+        working-directory: alex_browser
+        run: flutter pub get
+
+      - name: Install CocoaPods dependencies
+        working-directory: alex_browser/ios
+        run: pod install --repo-update
+
+      # No Apple Developer certificate, provisioning profile, or signing
+      # secret is used anywhere in this workflow or repository. The Xcode
+      # project (ios/Runner.xcodeproj) is already configured with
+      # CODE_SIGNING_ALLOWED=NO / CODE_SIGNING_REQUIRED=NO, so this always
+      # produces a genuinely unsigned build regardless of the runner's
+      # local Xcode/keychain state.
+      - name: Build unsigned iOS app
+        working-directory: alex_browser
+        run: |
+          flutter build ios --release --no-codesign \
+            --build-name=1.0.0 --build-number=1
+
+      # `flutter build ios --no-codesign` produces Runner.app under
+      # build/ios/iphoneos. A real .ipa is just that .app repackaged into
+      # the Payload/ folder structure Apple's installer expects — this is
+      # the correct, standard way to produce an unsigned IPA from Flutter
+      # when no Apple signing identity is available in CI.
+      - name: Package unsigned IPA
+        working-directory: alex_browser
+        run: |
+          set -e
+          BUILD_DIR="build/ios/iphoneos"
+          APP_PATH="$BUILD_DIR/Runner.app"
+
+          if [ ! -d "$APP_PATH" ]; then
+            echo "Runner.app not found at $APP_PATH"
+            ls -la "$BUILD_DIR" || true
+            exit 1
+          fi
+
+          mkdir -p "$BUILD_DIR/Payload"
+          cp -R "$APP_PATH" "$BUILD_DIR/Payload/Runner.app"
+
+          cd "$BUILD_DIR"
+          zip -r -X AlexBrowser.ipa Payload -x ".*"
+          cd -
+
+          mkdir -p build/ios/ipa_output
+          mv "$BUILD_DIR/AlexBrowser.ipa" build/ios/ipa_output/AlexBrowser.ipa
+
+      - name: Locate build output
+        working-directory: alex_browser
+        run: ls -la build/ios/ipa_output/
+
+      - name: Upload unsigned IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: alex-browser-ios-unsigned-ipa
+          path: alex_browser/build/ios/ipa_output/AlexBrowser.ipa
+          if-no-files-found: error
+          retention-days: 30

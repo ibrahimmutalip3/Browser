@@ -1,0 +1,63 @@
+name: alex_browser
+description: "Alex Browser — a full-featured mobile web browser built with Flutter."
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Browser engine (Chromium/Blink-based WebView on Android, WKWebView on iOS)
+  flutter_inappwebview: ^6.1.5
+
+  # Local persistence
+  sqflite: ^2.4.1
+  path: ^1.9.0
+  path_provider: ^2.1.5
+  shared_preferences: ^2.3.4
+
+  # Permissions (camera, microphone, location, notifications)
+  permission_handler: ^11.3.1
+
+  # Networking / connectivity awareness for error pages
+  connectivity_plus: ^6.1.1
+
+  # File downloads
+  http: ^1.2.2
+  open_filex: ^4.5.0
+
+  # URL / external scheme launching (tel:, mailto:, intent: fallback)
+  url_launcher: ^6.3.1
+
+  # Unique IDs for tabs, history entries, bookmarks, downloads
+  uuid: ^4.5.1
+
+  # Icons
+  cupertino_icons: ^1.0.8
+
+  # Immutable value objects
+  equatable: ^2.0.7
+
+  # Date formatting for history/downloads UI
+  intl: ^0.19.0
+
+  # App version/build number shown on the About screen
+  package_info_plus: ^8.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/icons/

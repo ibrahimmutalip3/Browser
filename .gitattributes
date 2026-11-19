@@ -1,0 +1,13 @@
+# Ensure the Gradle wrapper script keeps its executable bit and Unix line
+# endings regardless of the committer's OS or git autocrlf settings — a
+# non-executable gradlew is a common cause of "Permission denied" failures
+# in CI.
+alex_browser/android/gradlew text eol=lf
+*.bat text eol=crlf
+
+# Treat generated/binary project files as binary so git never tries to
+# diff or line-ending-normalize them.
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
