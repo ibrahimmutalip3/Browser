@@ -23,7 +23,8 @@ import 'package:alex_browser/core/services/permission_service.dart';
 /// 2.5.6). Both are driven through this single adapter so the rest of the
 /// app only ever talks to the [BrowserEngine] abstraction.
 class WebViewEngineAdapter implements BrowserEngine {
-  WebViewEngineAdapter({required this.isPrivate}) {
+  WebViewEngineAdapter({required this.isPrivate})
+    : _viewId = _instanceCounter++ {
     _pageStateController = StreamController<PageLoadState>.broadcast();
     _jsDialogController = StreamController<JsDialogRequest>.broadcast();
     _permissionController = StreamController<WebPermissionRequest>.broadcast();
@@ -38,8 +39,11 @@ class WebViewEngineAdapter implements BrowserEngine {
   /// browsing state.
   @override
   final bool isPrivate;
+  final int _viewId;
 
   InAppWebViewController? _controller;
+  Future<void> Function(InAppWebViewController controller)? _pendingLoad;
+
   late PageLoadState _state;
 
   late final StreamController<PageLoadState> _pageStateController;
@@ -66,9 +70,8 @@ class WebViewEngineAdapter implements BrowserEngine {
 
   @override
   Widget buildView() {
-    final int id = _instanceCounter++;
     return InAppWebView(
-      key: ValueKey<String>('webview_${id}_${isPrivate ? 'private' : 'normal'}'),
+      key: ValueKey<String>('webview_${_viewId}_${isPrivate ? 'private' : 'normal'}'),
       initialSettings: InAppWebViewSettings(
         javaScriptEnabled: _javaScriptEnabled,
         javaScriptCanOpenWindowsAutomatically: false,
@@ -87,7 +90,7 @@ class WebViewEngineAdapter implements BrowserEngine {
         // additionally purges the shared CookieManager so no cookie set
         // before the toggle was flipped lingers on disk.
         thirdPartyCookiesEnabled: !isPrivate && _cookiesEnabled,
-        transparentBackground: true,
+        transparentBackground: false,
         supportZoom: true,
         builtInZoomControls: true,
         displayZoomControls: false,
@@ -101,6 +104,13 @@ class WebViewEngineAdapter implements BrowserEngine {
       ),
       onWebViewCreated: (InAppWebViewController controller) {
         _controller = controller;
+
+        final pendingLoad = _pendingLoad;
+        _pendingLoad = null;
+
+        if (pendingLoad != null) {
+        unawaited(pendingLoad(controller));
+        }
       },
       onLoadStart: (InAppWebViewController controller, WebUri? uri) {
         _emitState(
@@ -361,10 +371,24 @@ class WebViewEngineAdapter implements BrowserEngine {
 
   @override
   Future<void> loadUrl(String url, {Map<String, String>? headers}) async {
-    final InAppWebViewController? controller = _controller;
-    if (controller == null) return;
+    final effectiveHeaders = _withDoNotTrack(headers);
+    final controller = _controller;
+
+    if (controller == null) {
+      _pendingLoad = (controller) => controller.loadUrl(
+            urlRequest: URLRequest(
+              url: WebUri(url),
+              headers: effectiveHeaders,
+            ),
+          );
+      return;
+    }
+
     await controller.loadUrl(
-      urlRequest: URLRequest(url: WebUri(url), headers: _withDoNotTrack(headers)),
+      urlRequest: URLRequest(
+        url: WebUri(url),
+        headers: effectiveHeaders,
+      ),
     );
   }
 
@@ -379,8 +403,18 @@ class WebViewEngineAdapter implements BrowserEngine {
 
   @override
   Future<void> loadHtml(String html, {String? baseUrl}) async {
-    final InAppWebViewController? controller = _controller;
-    if (controller == null) return;
+    final controller = _controller;
+
+    if (controller == null) {
+      _pendingLoad = (controller) => controller.loadData(
+            data: html,
+            baseUrl: baseUrl != null ? WebUri(baseUrl) : null,
+            mimeType: 'text/html',
+            encoding: 'utf8',
+          );
+      return;
+    }
+
     await controller.loadData(
       data: html,
       baseUrl: baseUrl != null ? WebUri(baseUrl) : null,
