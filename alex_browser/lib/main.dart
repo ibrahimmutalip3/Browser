@@ -1,47 +1,46 @@
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-void main() {
+import 'package:alex_browser/core/providers/core_providers.dart';
+import 'package:alex_browser/core/services/preferences_service.dart';
+import 'package:alex_browser/core/theme/app_theme.dart';
+import 'package:alex_browser/settings/controllers/settings_controller.dart';
+import 'package:alex_browser/ui/screens/browser_shell.dart';
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const DiagnosticApp());
+
+  final PreferencesService preferences =
+      await PreferencesService.init();
+
+  runApp(
+    ProviderScope(
+      overrides: <Override>[
+        preferencesServiceProvider.overrideWithValue(preferences),
+      ],
+      child: const AlexBrowserApp(),
+    ),
+  );
 }
 
-class DiagnosticApp extends StatelessWidget {
-  const DiagnosticApp({super.key});
+class AlexBrowserApp extends ConsumerWidget {
+  const AlexBrowserApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        backgroundColor: Color(0xFF101014),
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.check_circle_outline,
-                color: Color(0xFFD8FF64),
-                size: 64,
-              ),
-              SizedBox(height: 20),
-              Text(
-                'FLUTTER WORKS',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Diagnostic screen is running.',
-                style: TextStyle(color: Colors.white70),
-              ),
-            ],
-          ),
-        ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ThemeMode themeMode = ref.watch(
+      settingsControllerProvider.select(
+        (SettingsState s) => s.themeMode,
       ),
+    );
+
+    return MaterialApp(
+      title: 'Alex Browser',
+      debugShowCheckedModeBanner: false,
+      themeMode: themeMode,
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      home: const BrowserShell(),
     );
   }
 }
